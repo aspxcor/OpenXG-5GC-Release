@@ -1,0 +1,119 @@
+#!/bin/groovy
+/*
+ * Licensed to the OpenAirInterface (OAI) Software Alliance under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The OpenAirInterface Software Alliance licenses this file to You under
+ * the OAI Public License, Version 1.1  (the "License"); you may not use this file
+ * except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.openairinterface.org/?page_id=698
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *-------------------------------------------------------------------------------
+ * For more information about the OpenAirInterface (OAI) Software Alliance:
+ *      contact@openairinterface.org
+ */
+
+// test1
+// test2
+
+// Abstraction function to send social media messages:
+// like on Slack or Mattermost
+def sendSocialMediaMessage(pipeChannel, pipeColor, pipeMessage) {
+    if (params.pipelineUsesSlack != null) {
+        if (params.pipelineUsesSlack) {
+            slackSend channel: pipeChannel, color: pipeColor, message: pipeMessage
+        }
+    }
+}
+
+// Location of the executor node
+def nodeExecutor = params.nodeExecutor
+
+// VM Lockable resources
+def vmResource = params.vmLockableResource
+
+// Tags to shorten pipeline duration
+def doMandatoryTests = false
+def doFullTestsuite = false
+
+pipeline {
+    agent {
+        label nodeExecutor
+    }
+    options {
+        disableConcurrentBuilds()
+        timestamps()
+        gitLabConnection('OpenXG GitLab')
+        ansiColor('xterm')
+    }
+
+    stages {
+        stage ("Create VM") {
+            steps {
+                script {
+                    echo "create an VM for testing"
+                    sh './ci-scripts/createVM.sh'
+                }
+            }
+        }
+        stage ("Prepare environment") {
+            steps {
+                script {
+                    echo "Prepare environment in VM"
+                    sh './ci-scripts/prepareEnv.sh'
+                    /*
+                    if (true){
+                        echo "in if yuju"
+                        currentBuild.result = 'FAILED'
+                        error('Aborting the build.')
+                        return
+                    }*/
+                }
+            }
+        }
+        stage ("Run docker") {
+            steps {
+                script {
+                    echo "Run docker inside VM"
+                    sh './ci-scripts/run5GC.sh'
+                }
+            }
+        }
+        stage ("Verify Function") {
+            steps {
+                script {
+                    echo "Run docker inside VM"
+                    sh './ci-scripts/verifyFunction.sh'
+                }
+            }
+        }
+        
+    }
+    post {
+        always {
+            script {
+                // Stage destroy may not be run if error in previous stage
+                echo "Remove VM, clean up"
+                sh "./ci-scripts/removeVM.sh"
+            }
+        }
+        success {
+            script {
+                echo "Build and run successfully"
+
+            }
+        }
+        failure {
+            script {
+                echo "Build and run failed"
+            }
+        }
+    }
+}

@@ -1,0 +1,73 @@
+version: '3.3'
+services:
+    amf:
+       image: openxgmaster/amf:v1.0
+       container_name: amf
+       restart: always
+       logging:
+         driver: "json-file"
+         options:
+           max-size: "100m"
+       networks:
+           openxg:
+               aliases: 
+                 - web_amf
+               ipv4_address: 172.11.200.14
+               # ports:
+               #- "8282:8282"
+               # - "38412:38412/sctp"
+       command:
+         - /bin/bash 
+         - -c     
+         - |
+           cd /opt/5gc/amf/
+           ./start.sh --no-ausf
+       volumes:
+         - ../etc/amf.conf:/opt/5gc/amf/external.conf
+
+    smf:
+       image: openxgmaster/smf:v1.0
+       container_name: smf
+       restart: always
+       logging:
+         driver: "json-file"
+         options:
+           max-size: "100m"
+       networks:
+           openxg:
+               aliases: 
+                 - web_smf
+               ipv4_address: 172.11.200.15
+               #       ports:
+#         - "8889:8889"
+#         - "8805:8805/udp"
+       volumes:
+         - ../etc/smf.conf:/opt/5gc/smf/external.conf
+
+    spgwu:
+       image: openxgmaster/spgwu:v1.0
+       container_name: spgwu
+       depends_on:
+         - smf
+       restart: always
+       privileged: true
+       logging:
+         driver: "json-file"
+         options:
+           max-size: "100m"
+       networks:
+           openxg:
+               aliases:
+                 - spgwu
+               ipv4_address: 172.11.200.25
+               #   ports:
+               #- "2152:2152/udp"
+               #- "8805:8805"
+       volumes:
+         - ../etc/spgw_u.conf:/opt/5gc/spgw-u-tiny/external.conf
+
+networks:
+    openxg:
+       external:
+          name: docker-openxg
+

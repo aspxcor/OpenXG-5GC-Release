@@ -1,0 +1,49 @@
+version: '3.3'
+services:
+    mysql:
+       image: mysql:5.7
+       container_name: mysql
+       restart: always
+       logging:
+         driver: "json-file"
+         options:
+           max-size: "1m"
+       networks:
+           openxg:
+               aliases: 
+                 - web_mysql
+               ipv4_address: 172.11.200.10
+       ports:
+         - "3307:3306"
+         - "33070:33060"
+       volumes:
+         - ../docker-mysql/:/var/lib/mysql
+       environment:
+         MYSQL_ROOT_PASSWORD: root
+
+    phpmyadmin:
+       image: phpmyadmin/phpmyadmin
+       container_name: phpmyadmin
+       restart: always
+       logging:
+         driver: "json-file"
+         options:
+           max-size: "1m"
+       depends_on:
+         - mysql
+       networks:
+           openxg:
+               aliases:
+                 - web_phpmyadmin
+               ipv4_address: 172.11.200.9
+       ports:
+         - "8080:80"
+       environment:
+         PMA_HOST: 172.11.200.10
+         PMA_PORT: 3306
+
+networks:
+    openxg:
+       external:
+          name: docker-openxg
+
